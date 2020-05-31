@@ -12,6 +12,17 @@ to the same directory as the trajectory, before running this script.
 """
 
 
+# Setup path to trajectory
+trajPath = bpy.path.abspath("//trajectory.dat");
+
+# Select DNA or RNA
+type = 'DNA'
+
+# Select distance between keyframe
+# (anything above 1 will interpolate between trajectory steps)
+keyframeDist = 1
+
+
 def bbnsDist(type='DNA'):
     if type is 'DNA':
         return  0.8147053
@@ -99,32 +110,37 @@ def updatePositions(l, e, type='DNA'):
     # keep track of last backbone for sugar-phosphate positioning
     bbLast = bb
 
+def loadTrajectory(trajPath, type='DNA', keyframeDist='1'):
+    C = bpy.context
 
-C = bpy.context
+    # useful shortcut
+    scene = C.scene
+    collection = C.collection
 
-# useful shortcut
-scene = C.scene
-collection = C.collection
+    system = scene.objects[0]
+    strands = system.children
 
-system = scene.objects[0]
-strands = system.children
+    elements = {int(e.name.split('_')[1]): e for strand in strands for e in strand.children}
 
-elements = {int(e.name.split('_')[1]): e for strand in strands for e in strand.children}
+    print("{} elements found.".format(len(elements)))
 
-print(len(elements))
+    frame = 0
+    i = 0
+    with open(trajPath) as fp:
+        for line in fp:
+            vals = line.split(' ')
+            if vals[0] == 't':
+                frame += keyframeDist
+                i = 0
+                print('Frame {} ({})'.format(frame, line.strip()))
+            elif len(vals) == 15:
+                e = elements[i]
+                scene.frame_set(frame)
+                updatePositions(vals, e, type)
+                i += 1
+    scene.frame_end = frame
+    print('Trajectory loading finished')
 
-frame = 0
-i = 0
-with open(bpy.path.abspath("//trajectory_short.dat")) as fp:
-    for line in fp:
-        vals = line.split(' ')
-        if vals[0] == 't':
-            frame += 1
-            i = 0
-            print('Frame {} ({})'.format(frame, line.strip()))
-        elif len(vals) == 15:
-            e = elements[i]
-            scene.frame_set(frame)
-            updatePositions(vals, e, 'DNA')            
-            i += 1
-scene.frame_end = frame
+
+# Launch script
+loadTrajectory(trajPath, type, keyframeDist)
