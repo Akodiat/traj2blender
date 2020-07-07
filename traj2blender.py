@@ -13,7 +13,7 @@ to the same directory as the trajectory, before running this script.
 
 
 # Setup path to trajectory
-trajPath = bpy.path.abspath("//trajectory.dat");
+trajPath = bpy.path.abspath("//trajectory.dat")
 
 # Select DNA or RNA
 type = 'DNA'
@@ -65,7 +65,7 @@ def updatePositions(l, e, type='DNA'):
     # compute nucleoside rotation
     baseRotation = Vector((0, 0, 1)).rotation_difference(a3)
 
-    #compute connector position
+    # compute connector position
     con = Vector(((bb.x + ns.x) / 2, (bb.y + ns.y) / 2, (bb.z + ns.z) / 2))
 
     # compute connector rotation
@@ -76,9 +76,11 @@ def updatePositions(l, e, type='DNA'):
     if all(v == 0 for v in [a1.x, a1.y, a1.z, a3.z, a3.y, a3.z]):
         conLen = 0
 
+    components = {v.name.split('_')[0]: v for v in e.children}
+
     # compute sugar-phosphate positions/rotations
     sp = Vector()
-    if bbLast:
+    if bbLast and components['bbconnector'].scale != Vector((0, 0, 0)):
         sp.x = (bb.x + bbLast.x) / 2
         sp.y = (bb.y + bbLast.y) / 2
         sp.z = (bb.z + bbLast.z) / 2
@@ -90,7 +92,6 @@ def updatePositions(l, e, type='DNA'):
     spRotation = Vector((0, 0, 1)).rotation_difference((sp - bb).normalized())
 
     # Update values
-    components = {v.name.split('_')[0]: v for v in e.children}
     components['backbone'].location = bb
     components['nucleoside'].location = ns
     components['nucleoside'].rotation_quaternion = baseRotation
@@ -98,14 +99,17 @@ def updatePositions(l, e, type='DNA'):
     components['connector'].rotation_quaternion = rotationCon
     components['bbconnector'].location = sp
     components['bbconnector'].rotation_quaternion = spRotation
-    components['connector'].scale = Vector((1, conLen, 1))
+    components['connector'].scale = Vector((1, 1, conLen))
+    if (spLen > 0):
+        components['bbconnector'].scale = Vector((1, 1, spLen))
     
     # Insert new keyframes
-    components['backbone'].keyframe_insert(data_path="location", index=-1)
+    components['backbone'].keyframe_insert(data_path="location")
     for name in ['nucleoside', 'connector', 'bbconnector']:
-        components[name].keyframe_insert(data_path="location", index=-1)
-        components[name].keyframe_insert(data_path="rotation_quaternion", index=-1)
-    components['connector'].keyframe_insert(data_path="scale", index=-1)
+        components[name].keyframe_insert(data_path="location")
+        components[name].keyframe_insert(data_path="rotation_quaternion")
+    components['connector'].keyframe_insert(data_path="scale")
+    components['bbconnector'].keyframe_insert(data_path="scale")
     
     # keep track of last backbone for sugar-phosphate positioning
     bbLast = bb
